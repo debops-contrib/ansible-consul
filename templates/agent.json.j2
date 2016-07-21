@@ -1,0 +1,10 @@
+{
+    "bootstrap_expect": {{ consul__server_bootstrap_expect }},
+    "server": {{ consul__agent_is_server }},
+    "domain": "{{ consul__config_domain }}",
+    "datacenter": "{{ consul__config_datacenter }}",
+    "data_dir": "{{ consul__agent_data_dir }}",
+    "encrypt": "dGhpcyBpcyBubyBzZWNyZXQgdmFsdWU=",
+    "log_level": "{{ consul__agent_log_level }}",
+    "enable_syslog": {{ consul__agent_log_syslog }}
+ }

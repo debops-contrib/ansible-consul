@@ -1,0 +1,14 @@
+---
+- name: reload systemd
+  become: yes
+  command: systemctl daemon-reload
+
+- name: restart consul
+  action: service name=consul state=restarted enabled=yes
+  when: consul__manage_service
+
+- name: reload consul config
+  become: yes
+  command: pkill -1 consul
+  when: consul__service_state is not "stopped" and consul__manage_service
+

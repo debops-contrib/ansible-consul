@@ -1,0 +1,84 @@
+---
+- name: create consul directories
+  file: >
+    state=directory
+    path={{ item }}
+    owner={{consul__user}}
+    group={{consul__group}}
+  with_items:
+    - "{{ consul__user_home }}"
+    - "{{ consul__user_home }}/bin"
+    - "{{ consul__agent_config_dir }}"
+    - "{{ consul__agent_data_dir }}"
+    - "{{ consul__service_config_dir }}"
+    - "{{ consul__checks_config_dir }}"
+    - "{{ consul__watches_config_dir }}"
+
+# Check before creating log dir to prevent aggressively overwriting permissions
+- name: check for consul log directory
+  stat: >
+    path={{ consul__agent_log_file|dirname }}
+  register: consul__agent_logdir
+
+- name: create log directory if it does not exist
+  file: >
+    state=directory
+    path={{ consul__agent_log_file|dirname }}
+    owner={{ consul__user }}
+    group={{ consul__group }}
+  when: not consul__agent_logdir.stat.exists
+
+- name: touch the log file
+  file: >
+    state=touch
+    path={{ consul__agent_log_file }}
+    owner={{ consul__user }}
+    group={{ consul__group }}
+  changed_when: false
+
+- name: copy consul systemd script
+  template: >
+    src={{ consul__agent_systemd_template }}
+    dest=/etc/systemd/system/consul.service
+    owner=root
+    group=root
+    mode=0644
+  notify:
+    - reload systemd
+    - "{{ consul__restart_handler }}"
+
+- name: add consul to path through profile.d
+  template: >
+    src={{ consul__user_path_template }}
+    dest=/etc/profile.d/consul.sh
+    owner=root
+    group=root
+    mode=0755
+
+- name: copy consulkv script
+  template: >
+    src={{ consul__user_kv_template }}
+    dest={{ consul__user_home }}/bin/consulkv
+    owner={{ consul__user }}
+    group={{ consul__group }}
+    mode=0755
+
+- name: consul config file
+  template: >
+    src={{ consul__agent_config_template }}
+    dest={{ consul__agent_config_dir }}/{{ consul__agent_config_file }}
+    owner={{ consul__user }}
+    group={{ consul__group }}
+    mode=0755
+  notify:
+    - "{{ consul__restart_handler }}"
+
+- name: add CONSUL_RPC_ADDR to .bashrc
+  become: yes
+  become_user: "{{ consul__user }}"
+  lineinfile: >
+    dest={{ consul__user_home }}/.bashrc
+    insertbefore=BOF 
+    regexp='^export CONSUL_RPC_ADDR' 
+    line='export CONSUL_RPC_ADDR="{{ consul__client_address }}:{{ consul__agent_cli_api_port }}"' 
+    create=yes

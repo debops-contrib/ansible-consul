@@ -1,0 +1,8 @@
+---
+
+# We assume that the consul user, group and the consul binary exist on the target node. This will be achived by 
+# using another role.
+# This role will "only" add the configuration to use consul.
+
+
+- include: install.yml

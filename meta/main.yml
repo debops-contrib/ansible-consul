@@ -1,0 +1,12 @@
+---
+
+dependencies:
+  - role: debops.secret
+
+  - role: debops.etc_services
+    etc_services__dependent_list:
+      - '{{ consul__etc_services__dependent_list }}'
+
+  - role: debops.ferm
+    ferm__dependent_rules:
+      - '{{ consul__ferm__dependent_rules }}'

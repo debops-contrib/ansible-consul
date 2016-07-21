@@ -1,0 +1,229 @@
+consul__user: consul
+consul__group: consul
+consul__user_path_template: "consul.sh.j2"
+consul__user_kv_template: "consulkv.j2"
+consul__user_home: /home/consul
+
+
+consul__config_domain: "example.com"
+consul__config_datacenter: "DC-1"
+consul__binary_path: /usr/local/bin
+consul__agent_config_dir: /etc/consul/agent.d
+consul__agent_config_file: agent.json
+consul__agent_config_template: agent.json.j2
+consul__agent_data_dir: "{{ consul__user_home }}/data"
+consul__service_config_dir: /etc/consul/services.d
+consul__checks_config_dir: /etc/consul/checks.d
+consul__watches_config_dir: /etc/consul/watches.d
+
+
+consul__agent_is_server: false
+consul__server_bootstrap_expect: 3
+
+consul__agent_systemd_template: "consul.systemd.j2"
+consul__service_state: started
+consul__manage_service: true
+consul__reload_config_handler: reload consul config
+consul__restart_handler: restart consul
+
+
+consul__client_address: "127.0.0.1"
+
+# .. envvar:: consul__disable_update_check
+# 
+# Disable the automatic update checks
+consul__disable_update_check: false
+
+# -----------
+#   Logging
+# -----------
+consul__agent_log_file: /var/log/consul
+consul__agent_log_syslog: false
+consul__agent_log_level: "INFO"
+# ------------------------
+#   Ports used by consul
+# ------------------------
+
+# .. envvar:: consul_agent_rpc_port 
+#
+# Server RPC (Default 8300). This is used by servers to handle incoming 
+# requests from other agents. TCP only.
+consul__agent_rpc_port:          8300
+
+# .. envvar:: consul__agent_serf_lan_port
+#
+# Serf LAN (Default 8301). This is used to handle gossip in the LAN. 
+# Required by all agents. TCP and UDP.
+consul__agent_serf_lan_port:     8301
+
+# .. envvar:: consul__agent_serf_wan_port
+#
+# Serf WAN (Default 8302). This is used by servers to gossip over the WAN 
+# to other servers. TCP and UDP.
+consul__agent_serf_wan_port:     8302
+
+# .. envvar:: consul__agent_cli_api_port
+#
+# CLI RPC (Default 8400). This is used by all agents to handle RPC from 
+# the CLI. TCP only.
+consul__agent_cli_api_port:      8400
+
+# .. envvar:: consul__agent_http_api_port
+#
+# HTTP API (Default 8500). This is used by clients to talk to the HTTP API. 
+# TCP only. 
+# Set to -1 to disable
+consul__agent_http_api_port:     8500
+
+# .. envvar:: consul__agent_https_api_port
+#
+# HTTPS API (Default 8500). This is used by clients to talk to the HTTP API. 
+# TCP only. 
+# Set to -1 to disable. Default -1 (disabled).
+consul__agent_https_api_port:    -1
+
+# .. envvar:: consul__agent_dns_port
+#
+# DNS Interface (Default 8600). Used to resolve DNS queries. TCP and UDP.
+# Set to -1 to disable
+consul__agent_dns_port:          8600
+
+# .. envvar:: consul__agent_rpc_allow
+consul__agent_rpc_allow:        [ '0.0.0.0/0' ]
+
+# .. envvar:: consul__agent_serf_lan_allow
+consul__agent_serf_lan_allow:   [ '0.0.0.0/0' ]
+
+# .. envvar:: consul__agent_serf_wan_allow
+consul__agent_serf_wan_allow:   [ '0.0.0.0/0' ]
+
+# .. envvar:: consul__agent_cli_rpc_allow
+consul__agent_cli_rpc_allow:    [ '{{ consul__client_address }}' ]
+
+# .. envvar:: consul__agent_http_api_allow
+consul__agent_http_api_allow:   [ '{{ consul__client_address }}' ]
+
+# .. envvar:: consul__agent_https_api_allow
+consul__agent_https_api_allow:  [ '{{ consul__client_address }}' ]
+
+# .. envvar:: consul__agent_dns_allow
+consul__agent_dns_allow:        [ '{{ consul__client_address }}' ] 
+
+
+
+# ----------------------------------------
+#   Configuration of other Ansible roles
+# ----------------------------------------
+
+
+# .. envvar:: consul__etc_services__dependent_list
+#
+# Configuration for the ``debops.etc_services`` role.
+consul__etc_services__dependent_list:
+
+  - name: 'consul-agent-rpc'
+    port: '{{ consul__agent_rpc_port }}'
+    protocol: [ 'tcp' ]
+    comment: 'agent RPC - incoming requests from other agents'
+
+  - name: 'consul-serf-lan'
+    port: '{{ consul__agent_serf_lan_port }}'
+    protocols: [ 'tcp', 'udp' ]
+    comment: 'Serf LAN - handle gossip in the LAN. Required by all agents'
+
+  - name: 'consul-serf-wan'
+    port: '{{ consul__agent_serf_wan_port }}'
+    protocols: [ 'tcp', 'udp' ]
+    comment: 'Serf WAN - gossip over the WAN to other servers'
+
+  - name: 'consul-cli-rpc'
+    port: '{{ consul__agent_cli_api_port }}'
+    protocols: [ 'tcp' ]
+    comment: 'CLI RPC -  used by all agents to handle RPC from the CLI'
+
+  - name: 'consul-http-api'
+    port: '{{ consul__agent_http_api_port }}'
+    protocols: [ 'tcp' ]
+    comment: 'HTTP API - used by clients to talk to the HTTP API'
+
+  - name: 'consul-https-api'
+    port: '{{ consul__agent_https_api_port }}'
+    protocols: [ 'tcp' ]
+    comment: 'HTTPS API - used by clients to talk to the HTTP API'
+
+  - name: 'consul-dns'
+    port: '{{ consul__agent_dns_port }}'
+    protocols: [ 'tcp', 'udp' ]
+    comment: 'DNS Interface - used to resolve DNS queries'
+
+# .. envvar:: consul__agent_ferm__dependent_rules
+#
+# Configuration for ``debops.ferm`` Ansible role.
+consul__ferm__dependent_rules:
+
+  - type: 'accept'
+    dport: [ 'consul-agent-rpc' ]
+    saddr: '{{ consul__agent_rpc_allow }}'
+    protocol: 'tcp'
+    accept_any: False
+    weight: '40'
+    role: 'consul'
+
+  - type: 'accept'
+    dport: [ 'consul-serf-lan' ]
+    saddr: '{{ consul__agent_serf_lan_allow }}'
+    protocol: ['tcp', 'udp']
+    accept_any: True
+    weight: '40'
+    role: 'consul'
+
+  - type: 'accept'
+    dport: [ 'consul-serf-wan' ]
+    saddr: '{{ consul__agent_serf_wan_allow }}'
+    protocol: ['tcp', 'udp']
+    accept_any: True
+    weight: '40'
+    role: 'consul'
+
+  - type: 'accept'
+    dport: [ 'consul-cli-rpc' ]
+    saddr: '{{ consul__agent_cli_rpc_allow }}'
+    protocol: 'tcp'
+    accept_any: False
+    weight: '40'
+    role: 'consul'
+
+  - type: 'accept'
+    dport: [ 'consul-http-api' ]
+    saddr: '{{ consul__agent_http_api_allow }}'
+    accept_any: False
+    protocol: 'tcp'
+    weight: '40'
+    rule_state: '{{ "absent"
+                    if (consul__agent_http_api_port is undefined or 
+                        consul__agent_http_api_port <0)
+                    else "present" }}'
+    role: 'consul'
+
+  - type: 'accept'
+    dport: [ 'consul-https-api' ]
+    saddr: '{{ consul__agent_https_api_allow }}'
+    accept_any: False
+    weight: '40'
+    rule_state: '{{ "absent"
+                    if (consul__agent_https_api_port is undefined or 
+                        consul__agent_https_api_port <0)
+                    else "present" }}'
+    role: 'consul'
+
+  - type: 'accept'
+    dport: [ 'consul-dns' ]
+    saddr: '{{ consul__agent_dns_allow }}'
+    protocol: ['tcp', 'udp']
+    accept_any: False
+    weight: '40'
+    rule_state: '{{ "absent"
+                    if (consul__agent_dns_port is undefined or 
+                        consul__agent_dns_port <0)
+                    else "present" }}'
+    role: 'consul'

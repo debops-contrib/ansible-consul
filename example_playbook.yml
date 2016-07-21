@@ -1,0 +1,23 @@
+---
+
+# first version: (far far from a complete role)
+
+# install a single node consul server (without ui)
+# you can login to the node as user consul
+# test the working installation with:
+# see if the server is running
+#  - consul members
+# add and retrive values form the K/V store
+#  - consulkv set test testing
+#  - consulkv info test
+
+- hosts: [consul_servers]
+  become: true
+
+  vars:
+    consul__agent_is_server: 'true'
+    consul__server_bootstrap_expect: 1
+    consul__agent_log_syslog: 'true'
+  roles:
+    - { role: debops-contrib.consul }
+
